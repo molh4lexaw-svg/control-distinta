@@ -472,7 +472,8 @@ function botPreliq() {
     checkbox: ["(//td[contains(@id,',0') and contains(@class,'urSTSC')])[1]", "(//td[contains(@class,'lsSapTable--noPadding') and contains(@id,',0')])[1]", "(//td[contains(@id,',0')])[1]"],
     agregar: ["//*[@role='button' and contains(.,'Agregar material')]", "//*[normalize-space(text())='Agregar material / servicio']", "//div[contains(@class,'lsButton') and contains(.,'Agregar material')]", "//*[contains(@aria-label,'Agregar material')]"],
     cant: ["//*[@aria-label='Cantidad necesaria de componente']", "//*[@title='Cantidad necesaria de componente']", "//*[normalize-space(text())='Cant. por preliquidar:']/following::*[contains(@class,'lsField_input')][1]", "//*[normalize-space(text())='Cant. por preliquidar']/following::input[1]"],
-    idInput: ["//input[contains(@id,'Preliq')]", "//input[contains(@aria-label,'Preliquid')]", "//input[contains(@title,'Preliquid')]", "//input[contains(@placeholder,'Preliquid')]", "//input[contains(@aria-label,'ID')]"]
+    idInput: ["//*[contains(normalize-space(text()),'ID Preliquidaci')]/following::input[1]", "//label[contains(.,'ID Preliquidaci')]/following::input[1]", "//input[contains(@id,'Preliq')]", "//input[contains(@aria-label,'Preliquid')]", "//input[contains(@title,'Preliquid')]"],
+    ejecutar: ["//*[normalize-space(text())='Ejecutar']", "//*[@title='Ejecutar']", "//*[contains(@id,'btn[8]')]"]
   };
 
   let panel = document.getElementById('sapPreliqLog');
@@ -670,6 +671,14 @@ function botPreliq() {
       log('Ingresando ID ' + P.id + ' en ZPM018...');
       setVal(idIn, P.id);
       key(idIn, 'Enter', 'Enter', 13);
+      await sleep(1200);
+      hdr = await waitAny(XP.gridHdr, 1500);
+      if (!hdr) {
+        const btnEj = await waitAny(XP.ejecutar, 4000);
+        if (!btnEj) { log('No encuentro el botón Ejecutar.'); return; }
+        log('Pulsando Ejecutar...');
+        clic(btnEj);
+      }
       hdr = await waitAny(XP.gridHdr, 25000);
       if (!hdr) { log('No cargó el grid de preliquidación tras ingresar el ID.'); return; }
     }
