@@ -573,6 +573,11 @@ function botPreliq() {
   const diag = () => {
     const ds = allDocs(document);
     log('Diagnóstico: documentos accesibles=' + ds.length + ' | iframes en la página=' + document.querySelectorAll('iframe').length);
+    document.querySelectorAll('iframe').forEach((f, i) => {
+      let host = 'sin-src';
+      try { host = f.src ? new URL(f.src).host : 'sin-src'; } catch (e) { host = 'src-invalido'; }
+      log(' iframe ' + i + ' host: ' + host);
+    });
     ds.forEach((d, i) => {
       const all = d.querySelectorAll('input');
       const primeros = Array.from(all).slice(0, 6).map(x => (x.id || '-') + '/' + (x.getAttribute('aria-label') || '-'));
