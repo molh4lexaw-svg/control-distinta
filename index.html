@@ -505,7 +505,13 @@ function botPreliq() {
   };
   const fx = (xp, root) => {
     for (const d of allDocs(root || document)) {
-      try { const n = d.evaluate(xp, d, null, 9, null).singleNodeValue; if (n) return n; } catch (e) {}
+      try {
+        const snap = d.evaluate(xp, d, null, 7, null);
+        for (let i = 0; i < snap.snapshotLength; i++) {
+          const n = snap.snapshotItem(i);
+          if (n && n.tagName !== 'SCRIPT' && n.tagName !== 'STYLE') return n;
+        }
+      } catch (e) {}
     }
     return null;
   };
@@ -553,6 +559,25 @@ function botPreliq() {
         w.open = function (...a) { const r = o.apply(this, a); if (r) NUEVAS.push(r); return r; };
       }
     }
+  };
+
+  const findIdInput = () => {
+    for (const d of allDocs(document)) {
+      for (const inp of d.querySelectorAll('input')) {
+        const row = inp.closest('tr') || inp.parentElement;
+        if (row && (row.textContent || '').indexOf('ID Preliquidaci') >= 0) return inp;
+      }
+    }
+    return null;
+  };
+  const diag = () => {
+    const ds = allDocs(document);
+    log('Diagnóstico: documentos accesibles=' + ds.length + ' | iframes en la página=' + document.querySelectorAll('iframe').length);
+    ds.forEach((d, i) => {
+      const all = d.querySelectorAll('input');
+      const primeros = Array.from(all).slice(0, 6).map(x => (x.id || '-') + '/' + (x.getAttribute('aria-label') || '-'));
+      log(' doc ' + i + ': ' + all.length + ' inputs; ' + primeros.join(' | '));
+    });
   };
 
   const clicDerechoMat = async () => {
@@ -666,8 +691,9 @@ function botPreliq() {
 
     let hdr = await waitAny(XP.gridHdr, 2000);
     if (!hdr) {
-      const idIn = await waitAny(XP.idInput, 5000);
-      if (!idIn) { log('No encuentro el grid ni el campo de ID. Abre ZPM018 primero.'); return; }
+      let idIn = await waitAny(XP.idInput, 5000);
+      if (!idIn) idIn = findIdInput();
+      if (!idIn) { diag(); log('No encuentro el grid ni el campo de ID. Abre ZPM018 primero.'); return; }
       log('Ingresando ID ' + P.id + ' en ZPM018...');
       setVal(idIn, P.id);
       key(idIn, 'Enter', 'Enter', 13);
