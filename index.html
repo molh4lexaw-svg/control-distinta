@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Preliquidación SAP · ZPM018</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --ink:#1c1d3a;
+  --ink-soft:#4b4e74;
+  --glass:rgba(255,255,255,.22);
+  --glass-2:rgba(255,255,255,.42);
+  --stroke:rgba(255,255,255,.55);
+  --violet:#7c5cff;
+  --cyan:#22d3ee;
+  --ok:#0f9d58;
+  --bad:#e11d48;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;
+  font:14px/1.45 "Segoe UI",system-ui,Roboto,Arial,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(160deg,#e6ecff 0%,#f3e8ff 45%,#dff7fb 100%);
+  background-attachment:fixed;
+  overflow-x:hidden;
+}
+/* Fondo líquido: manchas de color difuminadas que se mueven */
+.blob{position:fixed;border-radius:50%;filter:blur(70px);z-index:-1;opacity:.85;pointer-events:none;animation:drift 22s ease-in-out infinite alternate}
+.b1{width:560px;height:560px;top:-160px;left:-120px;background:radial-gradient(circle at 35% 35%,#c4b5fd,#7c3aed 65%)}
+.b2{width:620px;height:620px;bottom:-220px;right:-160px;background:radial-gradient(circle at 65% 60%,#a5f3fc,#0ea5e9 65%);animation-delay:-7s}
+.b3{width:420px;height:420px;top:38%;left:46%;background:radial-gradient(circle at 50% 50%,#fbcfe8,#f472b6 70%);opacity:.45;animation-delay:-13s}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(70px,50px) scale(1.12)}}
+
+.wrap{max-width:1400px;margin:18px auto;padding:0 16px 40px}
+.glass{
+  background:var(--glass);
+  -webkit-backdrop-filter:blur(20px) saturate(170%);
+  backdrop-filter:blur(20px) saturate(170%);
+  border:1px solid var(--stroke);
+  border-radius:24px;
+  box-shadow:0 12px 40px rgba(72,62,160,.18), inset 0 1px 0 rgba(255,255,255,.7), inset 0 -1px 0 rgba(255,255,255,.2);
+  padding:16px 18px;
+  margin-bottom:16px;
+  position:relative;
+}
+.glass::before{ /* brillo superior tipo vidrio líquido */
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0) 38%);
+  opacity:.7;
+}
+.glass > *{position:relative}
+
+header.glass{padding:18px 20px}
+h1{
+  font-size:22px;margin:0 0 4px;font-weight:800;letter-spacing:.2px;
+  background:linear-gradient(90deg,#4c1d95,#7c3aed 45%,#0e7490);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+h2{font-size:15px;margin:0 0 8px;font-weight:700}
+.muted{color:var(--ink-soft);font-size:12.5px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--ink-soft);font-weight:600}
+
+input,select,textarea{
+  font:inherit;color:var(--ink);
+  background:rgba(255,255,255,.55);
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:14px;padding:8px 12px;outline:none;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  transition:box-shadow .2s,border-color .2s,background .2s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--violet);box-shadow:0 0 0 4px rgba(124,92,255,.18);background:rgba(255,255,255,.75)}
+input:disabled,select:disabled{opacity:.5}
+input[type=file]{padding:6px 10px;font-size:12px}
+input[type=checkbox]{accent-color:var(--violet);width:16px;height:16px;padding:0}
+
+.btn,.bm{
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  font:inherit;font-weight:700;color:#fff;text-decoration:none;
+  border:0;border-radius:999px;padding:10px 18px;
+  background:linear-gradient(135deg,rgba(124,92,255,.95),rgba(34,211,238,.9));
+  box-shadow:0 8px 20px rgba(124,92,255,.32), inset 0 1px 0 rgba(255,255,255,.5);
+  transition:transform .18s,box-shadow .18s,filter .18s;
+}
+.btn:hover,.bm:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(124,92,255,.38), inset 0 1px 0 rgba(255,255,255,.5);filter:saturate(1.1)}
+.btn:active,.bm:active{transform:translateY(1px)}
+.btn-ghost{background:rgba(255,255,255,.4);color:var(--ink);border:1px solid var(--stroke);box-shadow:none}
+.btn-ghost:hover{background:rgba(255,255,255,.6);box-shadow:0 6px 16px rgba(72,62,160,.15)}
+.bm.btn-ghost{border:1px solid rgba(124,92,255,.6);color:#3b2a8f}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border-radius:999px;
+  background:rgba(255,255,255,.38);border:1px solid var(--stroke);font-size:12px;color:var(--ink-soft);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+}
+.chip b{font-size:15px;color:var(--ink)}
+.chip.ok b{color:var(--ok)}
+.chip.warn b{color:#b45309}
+
+.estado{padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.4);border:1px solid var(--stroke);margin:0}
+.estado.err{color:var(--bad);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
+.err{color:var(--bad);font-weight:600}
+
+.relpos{position:relative;display:inline-block}
+.colmenu{
+  display:none;position:absolute;z-index:10;top:calc(100% + 8px);left:0;
+  padding:10px;gap:8px;max-width:560px;flex-wrap:wrap;border-radius:18px;
+  background:rgba(255,255,255,.7);border:1px solid var(--stroke);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%);
+  box-shadow:0 14px 40px rgba(72,62,160,.22);
+}
+.colmenu.open{display:flex}
+.colmenu label{flex-direction:row;align-items:center;gap:6px;color:var(--ink)}
+
+.scroll{max-height:56vh;overflow:auto;border-radius:18px;border:1px solid var(--stroke);background:rgba(255,255,255,.18)}
+table.sapgrid{width:100%;border-collapse:separate;border-spacing:0}
+table.sapgrid th,table.sapgrid td{
+  padding:7px 10px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;
+  border-bottom:1px solid rgba(255,255,255,.5);
+}
+table.sapgrid thead th{
+  position:sticky;top:0;z-index:2;cursor:pointer;font-weight:700;color:var(--ink);
+  background:rgba(255,255,255,.7);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(124,92,255,.25);
+}
+table.sapgrid thead tr+tr th{top:34px;cursor:default;font-weight:500;padding:4px 6px;background:rgba(255,255,255,.55)}
+table.sapgrid thead tr+tr input{width:100%;font-size:12px;padding:4px 8px;border-radius:10px}
+table.sapgrid tbody tr{transition:background .15s}
+table.sapgrid tbody tr:hover td{background:rgba(255,255,255,.45)}
+table.sapgrid tbody td{background:rgba(255,255,255,.18)}
+table.sapgrid td.num,table.sapgrid th.num{text-align:right;font-variant-numeric:tabular-nums}
+table.sapgrid td.estado-enviar{color:var(--ok);font-weight:600}
+table.sapgrid td.estado-omi{color:#b45309}
+
+textarea#manual{width:100%;height:96px;margin-top:10px;font-size:12px}
+.steps{margin:0 0 12px 18px;padding:0;color:var(--ink-soft)}
+.steps li{margin-bottom:4px}
+</style>
+</head>
+<body>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
+
+<div class="wrap">
+
+<header class="glass">
+  <h1>Preliquidación SAP · ZPM018</h1>
+  <p class="muted" style="margin:0 0 14px">Sube la liquidación, revisa los registros y envíalos a la preliquidación de SAP.</p>
+  <div class="row">
+    <label>Excel
+      <input type="file" id="archivo" accept=".xlsx,.xlsm,.xls">
+    </label>
+    <label>Tipo
+      <select id="tipo">
+        <option value="mano_obra">Mano de obra</option>
+        <option value="materiales">Materiales</option>
+      </select>
+    </label>
+    <label>Columna de cantidad (materiales)
+      <select id="variante">
+        <option value="normal">INSTALACION TOTAL</option>
+        <option value="distinta">TOTAL INSTALADO EON</option>
+      </select>
+    </label>
+    <label>ID prediliquidación
+      <input id="idPre" size="14" placeholder="se detecta del Excel">
+    </label>
+    <a class="bm" href="https://pluz-peru-portal-prd.workzonehr.cfapps.br10.hana.ondemand.com/site#workzone-viewAll?sap-app-origin-hint=&amp;/universal_search/search?query=zpm018" target="_blank" rel="noopener">Abrir ZPM018 en Work Zone</a>
+  </div>
+  <p class="estado muted" id="estado" style="margin-top:14px">Sube el Excel para ver los registros.</p>
+</header>
+
+<section class="glass">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <div class="chips">
+      <span class="chip ok">Enviar <b id="nEnv">0</b></span>
+      <span class="chip warn">Omitidos (≤ 0) <b id="nOmi">0</b></span>
+      <span class="chip">Hoja <b id="hoja">—</b></span>
+      <span class="chip">Columnas <b id="cols">—</b></span>
+    </div>
+    <div class="relpos">
+      <button class="btn btn-ghost" id="btnCols">Columnas ▾</button>
+      <div class="colmenu" id="colmenu"></div>
+    </div>
+  </div>
+  <div class="scroll" id="gridWrap" style="margin-top:12px"></div>
+</section>
+
+<section class="glass">
+  <h2>Enviar a SAP</h2>
+  <ol class="steps muted">
+    <li>Revisa el ID y la tabla, luego pulsa <b>Copiar datos para SAP</b>.</li>
+    <li>Abre ZPM018 en SAP (botón de arriba) y deja lista la pantalla de preliquidación.</li>
+    <li>En esa pestaña de SAP haz clic en el favorito <b>SAP Preliq</b>. Arrástralo a la barra de favoritos una sola vez; no lo ejecutes desde esta página.</li>
+  </ol>
+  <div class="row">
+    <button class="btn" id="btnCopiar">Copiar datos para SAP</button>
+    <a class="bm btn-ghost" id="bm" href="#" title="Arrastra este enlace a la barra de favoritos">SAP Preliq</a>
+    <span id="msg" class="muted"></span>
+  </div>
+  <textarea id="manual" hidden></textarea>
+</section>
+
+</div>
+
+<script>
+const CONFIG = {
+  materiales: { sheet: 'MATERIALES',   hCod: 'NUEVA MATRÍCULA', hCant: 'INSTALACION TOTAL', s: false, inicio: 11, cod: 3, cant: 14 },
+  mano_obra:  { sheet: 'MANO DE OBRA', hCod: null,              hCant: null,                s: true,  inicio: 12, cod: 3, cant: 14 }
+};
+
+const COLS = [
+  { k: 'fila', t: 'Fila' },
+  { k: 'material', t: 'Material' },
+  { k: 'cantidad', t: 'Cant. Excel' },
+  { k: 'valor', t: 'Valor SAP' },
+  { k: 'estado', t: 'Estado' }
+];
+
+const $ = id => document.getElementById(id);
+const ST = { rows: [], sk: null, sd: 1, filt: {}, hide: {} };
+const thRef = {};
+let GRID_TBL = null;
+let WB = null;
+let DATA = { items: [], omitidos: [] };
+
+/* ---------- utilidades ---------- */
+function normH(t) {
+  return String(t).trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/).filter(Boolean).join(' ');
+}
+function lector(ws) {
+  const rg = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  return {
+    maxCol: rg.e.c + 1,
+    get(r, c) { const cell = ws[XLSX.utils.encode_cell({ r: r - 1, c: c - 1 })]; return cell ? cell.v : null; }
+  };
+}
+function fmt(n) {
+  // Igual que formatear_numero_sap: 1,234.56 -> 1.234,56
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    .replace(/,/g, 'X').replace(/\./g, ',').replace(/X/g, '.');
+}
+function detectarCol(rd, texto, filaMax) {
+  if (!texto) return null;
+  const obj = normH(texto);
+  for (let f = 1; f < filaMax; f++) {
+    for (let c = 1; c <= rd.maxCol; c++) {
+      const v = rd.get(f, c);
+      if (v == null || String(v).trim() === '') continue;
+      if (normH(v) === obj) return c;
+    }
+  }
+  return null;
+}
+function estado(texto, esError) {
+  const e = $('estado');
+  e.textContent = texto;
+  e.className = 'estado ' + (esError ? 'err' : 'muted');
+}
+function msg(texto, esError) {
+  const m = $('msg');
+  m.textContent = texto;
+  m.className = esError ? 'err' : 'ok';
+}
+
+/* ---------- lectura del Excel (port de leer_datos_excel) ---------- */
+function leerExcel(wb, tipo, variante) {
+  const cfg = Object.assign({}, CONFIG[tipo]);
+  if (tipo === 'materiales' && variante === 'distinta') cfg.hCant = 'TOTAL INSTALADO EON';
+  const ws = wb.Sheets[cfg.sheet];
+  if (!ws) throw new Error(`No existe la hoja "${cfg.sheet}" en el Excel`);
+  const rd = lector(ws);
+  const cCod = detectarCol(rd, cfg.hCod, cfg.inicio) || cfg.cod;
+  const cCant = detectarCol(rd, cfg.hCant, cfg.inicio) || cfg.cant;
+  const items = [], omitidos = [];
+  for (let f = cfg.inicio; ; f++) {
+    const raw = rd.get(f, cCod);
+    if (raw == null || String(raw).trim() === '') break;
+    let cant = rd.get(f, cCant);
+    cant = cant == null ? 0 : cant;
+    const base = typeof raw === 'number' ? String(raw) : String(raw).trim();
+    const mat = cfg.s ? 'S' + base : base;
+    const n = Number(cant);
+    if (Number.isNaN(n)) throw new Error(`Fila ${f}: cantidad no numérica (${cant})`);
+    if (n > 0) items.push({ fila: f, material: mat, cantidad: n, valor: fmt(n) });
+    else omitidos.push({ fila: f, material: mat, cantidad: n });
+  }
+  return { hoja: cfg.sheet, cCod, cCant, items, omitidos };
+}
+
+// Busca "ID. Preliq" (o cualquier texto con "PRELIQ") y toma el primer valor a su derecha.
+// Revisa primero la hoja de mano de obra.
+function detectarID(wb) {
+  const orden = ['MANO DE OBRA', ...wb.SheetNames.filter(n => n !== 'MANO DE OBRA')];
+  for (const n of orden) {
+    const ws = wb.Sheets[n];
+    if (!ws) continue;
+    const rd = lector(ws);
+    for (let r = 1; r <= 80; r++) {
+      for (let c = 1; c <= rd.maxCol; c++) {
+        const v = rd.get(r, c);
+        if (v == null) continue;
+        if (normH(v).includes('PRELIQ')) {
+          for (let k = c + 1; k <= c + 4; k++) {
+            const w = rd.get(r, k);
+            if (w != null && String(w).trim() !== '') return String(w).trim();
+          }
+        }
+      }
+    }
+  }
+  return '';
+}
+
+/* ---------- tabla tipo grilla SAP ---------- */
+function buildGrid() {
+  const wrap = $('gridWrap');
+  const tbl = document.createElement('table');
+  tbl.className = 'sapgrid';
+  const thead = tbl.createTHead();
+  const r1 = thead.insertRow(), r2 = thead.insertRow();
+  COLS.forEach(c => {
+    const th = document.createElement('th');
+    th.dataset.k = c.k;
+    th.onclick = () => { if (ST.sk === c.k) ST.sd *= -1; else { ST.sk = c.k; ST.sd = 1; } paint(); };
+    r1.appendChild(th);
+    thRef[c.k] = th;
+    const th2 = document.createElement('th');
+    th2.dataset.k = c.k;
+    const inp = document.createElement('input');
+    inp.placeholder = 'filtrar';
+    inp.oninput = () => { ST.filt[c.k] = inp.value; paint(); };
+    th2.appendChild(inp);
+    r2.appendChild(th2);
+  });
+  tbl.appendChild(document.createElement('tbody'));
+  wrap.innerHTML = '';
+  wrap.appendChild(tbl);
+  GRID_TBL = tbl;
+
+  const menu = $('colmenu');
+  COLS.forEach(c => {
+    const lab = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = true;
+    cb.onchange = () => { ST.hide[c.k] = !cb.checked; paint(); };
+    lab.append(cb, c.t);
+    menu.appendChild(lab);
+  });
+  $('btnCols').onclick = () => menu.classList.toggle('open');
+}
+
+function paint() {
+  let data = ST.rows.filter(r => COLS.every(c => {
+    const q = (ST.filt[c.k] || '').trim().toLowerCase();
+    return !q || String(r[c.k]).toLowerCase().includes(q);
+  }));
+  if (ST.sk) {
+    const k = ST.sk, d = ST.sd;
+    data = data.slice().sort((a, b) => {
+      const x = typeof a[k] === 'number' ? a[k] : String(a[k]).toLowerCase();
+      const y = typeof b[k] === 'number' ? b[k] : String(b[k]).toLowerCase();
+      return x > y ? d : x < y ? -d : 0;
+    });
+  }
+  COLS.forEach(c => {
+    const th = thRef[c.k];
+    th.textContent = c.t + (ST.sk === c.k ? (ST.sd > 0 ? ' ▲' : ' ▼') : '');
+    th.className = (c.k === 'cantidad' || c.k === 'fila') ? 'num' : '';
+  });
+  GRID_TBL.querySelectorAll('[data-k]').forEach(el => {
+    el.style.display = ST.hide[el.dataset.k] ? 'none' : '';
+  });
+  const tb = GRID_TBL.tBodies[0];
+  tb.innerHTML = '';
+  data.forEach(r => {
+    const tr = tb.insertRow();
+    COLS.forEach(c => {
+      const td = tr.insertCell();
+      td.dataset.k = c.k;
+      td.textContent = r[c.k];
+      if (c.k === 'cantidad' || c.k === 'fila') td.className = 'num';
+      if (c.k === 'estado') td.className = r.estado === 'Enviar' ? 'estado-enviar' : 'estado-omi';
+      if (ST.hide[c.k]) td.style.display = 'none';
+    });
+  });
+}
+
+function cargarGrid(r) {
+  ST.rows = [
+    ...r.items.map(i => ({ fila: i.fila, material: i.material, cantidad: i.cantidad, valor: i.valor, estado: 'Enviar' })),
+    ...r.omitidos.map(o => ({ fila: o.fila, material: o.material, cantidad: o.cantidad, valor: '—', estado: 'Omitido (≤ 0)' }))
+  ].sort((a, b) => a.fila - b.fila);
+  paint();
+  $('nEnv').textContent = r.items.length;
+  $('nOmi').textContent = r.omitidos.length;
+}
+
+function procesar(detectarIdNuevo) {
+  if (!WB) return;
+  const tipo = $('tipo').value, variante = $('variante').value;
+  $('variante').disabled = tipo !== 'materiales';
+  try {
+    const r = leerExcel(WB, tipo, variante);
+    DATA = r;
+    $('hoja').textContent = r.hoja;
+    $('cols').textContent = XLSX.utils.encode_col(r.cCod - 1) + ' / ' + XLSX.utils.encode_col(r.cCant - 1);
+    cargarGrid(r);
+    if (detectarIdNuevo) $('idPre').value = detectarID(WB);
+    estado(`Listo: ${r.items.length} registros para enviar y ${r.omitidos.length} omitidos. Revisa el ID de prediliquidación.`);
+  } catch (err) {
+    estado(err.message, true);
+  }
+}
+
+$('archivo').onchange = async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const buf = await f.arrayBuffer();
+    WB = XLSX.read(buf, { type: 'array' });
+    procesar(true);
+  } catch (err) {
+    estado('No se pudo leer el Excel: ' + err.message, true);
+  }
+};
+$('tipo').onchange = () => procesar(false);
+$('variante').onchange = () => procesar(false);
+
+/* ---------- salida hacia SAP ---------- */
+$('btnCopiar').onclick = async () => {
+  const id = $('idPre').value.trim();
+  if (!id) { msg('Falta el ID de prediliquidación.', true); return; }
+  if (!DATA.items.length) { msg('No hay registros para enviar.', true); return; }
+  const txt = JSON.stringify({
+    v: 1,
+    id,
+    tipo: $('tipo').value,
+    variante: $('variante').value,
+    items: DATA.items.map(i => [i.material, i.valor])
+  });
+  try {
+    await navigator.clipboard.writeText(txt);
+    msg(`Copiado (${DATA.items.length} registros). Ahora ve a la pestaña de SAP y usa el favorito SAP Preliq.`);
+  } catch (e) {
+    const t = $('manual');
+    t.hidden = false;
+    t.value = txt;
+    t.select();
+    msg('No pude copiar automáticamente. Copia el texto de abajo.', true);
+  }
+};
+
+/* ---------- el bot que corre DENTRO de SAP (favorito) ----------
+   Se convierte en bookmarklet. No usar comentarios // dentro de la función. */
+function botPreliq() {
+  const NUEVAS = [];
+  const XP = {
+    matHeader: ["(//*[normalize-space(text())='Material'])[1]", "(//table[contains(@class,'urST3HTblF')][.//text()[normalize-space()='Material']])[1]", "(//table[contains(@class,'lsSTBSHCTBL')])[1]"],
+    fijar: ["//*[normalize-space(text())='Fijar filtro']", "//*[@role='menuitem' and contains(.,'Fijar filtro')]", "//li[contains(.,'Fijar filtro')]", "//span[contains(.,'Fijar filtro')]", "//div[contains(.,'Fijar filtro')]"],
+    borrar: ["//*[normalize-space(text())='Borrar filtro']", "//*[@role='menuitem' and contains(.,'Borrar filtro')]", "//li[contains(.,'Borrar filtro')]", "//span[contains(.,'Borrar filtro')]", "//*[normalize-space(text())='Eliminar filtro']", "//*[contains(.,'Eliminar filtro')]"],
+    inputFiltro: ["//input[@role='textbox']", "//*[contains(@id,'VALUE')]//input", "//*[contains(@id,'DYN_')]//input", "(//input)[last()]"],
+    gridHdr: ["//*[normalize-space(text())='Por PreLiquidar']", "//*[contains(normalize-space(text()),'Por PreLiquidar')]", "//*[normalize-space(text())='Por Preliquidar']"],
+    checkbox: ["(//td[contains(@id,',0') and contains(@class,'urSTSC')])[1]", "(//td[contains(@class,'lsSapTable--noPadding') and contains(@id,',0')])[1]", "(//td[contains(@id,',0')])[1]"],
+    agregar: ["//*[@role='button' and contains(.,'Agregar material')]", "//*[normalize-space(text())='Agregar material / servicio']", "//div[contains(@class,'lsButton') and contains(.,'Agregar material')]", "//*[contains(@aria-label,'Agregar material')]"],
+    cant: ["//*[@aria-label='Cantidad necesaria de componente']", "//*[@title='Cantidad necesaria de componente']", "//*[normalize-space(text())='Cant. por preliquidar:']/following::*[contains(@class,'lsField_input')][1]", "//*[normalize-space(text())='Cant. por preliquidar']/following::input[1]"],
+    idInput: ["//input[contains(@id,'Preliq')]", "//input[contains(@aria-label,'Preliquid')]", "//input[contains(@title,'Preliquid')]", "//input[contains(@placeholder,'Preliquid')]", "//input[contains(@aria-label,'ID')]"]
+  };
+
+  let panel = document.getElementById('sapPreliqLog');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'sapPreliqLog';
+    panel.setAttribute('style', 'position:fixed;top:10px;right:10px;width:440px;max-height:50vh;overflow:auto;background:rgba(255,255,255,.85);color:#1c1d3a;border:1px solid rgba(124,92,255,.5);border-radius:16px;font:12px monospace;padding:10px;z-index:2147483647;box-shadow:0 12px 36px rgba(72,62,160,.3)');
+    const x = document.createElement('button');
+    x.textContent = 'cerrar';
+    x.onclick = () => panel.remove();
+    panel.appendChild(x);
+    document.body.appendChild(panel);
+  }
+  const log = m => {
+    const d = document.createElement('div');
+    d.textContent = m;
+    panel.appendChild(d);
+    panel.scrollTop = panel.scrollHeight;
+    console.log('[SAP Preliq] ' + m);
+  };
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const allDocs = root => {
+    const out = [root];
+    root.querySelectorAll('iframe').forEach(f => {
+      try { if (f.contentDocument) out.push(...allDocs(f.contentDocument)); } catch (e) {}
+    });
+    return out;
+  };
+  const fx = (xp, root) => {
+    for (const d of allDocs(root || document)) {
+      try { const n = d.evaluate(xp, d, null, 9, null).singleNodeValue; if (n) return n; } catch (e) {}
+    }
+    return null;
+  };
+  const waitAny = async (xps, ms, root) => {
+    const end = Date.now() + ms;
+    do {
+      for (const xp of xps) { const e = fx(xp, root); if (e) return e; }
+      await sleep(150);
+    } while (Date.now() < end);
+    return null;
+  };
+  const actDoc = root => {
+    for (const d of allDocs(root || document)) {
+      const a = d.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return a;
+    }
+    return null;
+  };
+  const setVal = (el, v) => {
+    const w = el.ownerDocument.defaultView;
+    const proto = el.tagName === 'TEXTAREA' ? w.HTMLTextAreaElement.prototype : w.HTMLInputElement.prototype;
+    el.focus();
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, String(v));
+    el.dispatchEvent(new w.Event('input', { bubbles: true }));
+    el.dispatchEvent(new w.Event('change', { bubbles: true }));
+  };
+  const key = (el, k, code, kc, shift) => {
+    const w = el.ownerDocument.defaultView;
+    for (const t of ['keydown', 'keypress', 'keyup']) {
+      el.dispatchEvent(new w.KeyboardEvent(t, { key: k, code: code, keyCode: kc, which: kc, shiftKey: !!shift, bubbles: true, cancelable: true }));
+    }
+  };
+  const mouse = (el, t, btn) => {
+    const w = el.ownerDocument.defaultView;
+    el.dispatchEvent(new w.MouseEvent(t, { bubbles: true, cancelable: true, view: w, button: btn }));
+  };
+  const clic = el => { mouse(el, 'mousedown', 0); mouse(el, 'mouseup', 0); mouse(el, 'click', 0); };
+  const rclick = el => { mouse(el, 'mousedown', 2); mouse(el, 'mouseup', 2); mouse(el, 'contextmenu', 2); };
+  const hookOpen = () => {
+    for (const d of allDocs(document)) {
+      const w = d.defaultView;
+      if (w && !w.__spHook) {
+        w.__spHook = 1;
+        const o = w.open;
+        w.open = function (...a) { const r = o.apply(this, a); if (r) NUEVAS.push(r); return r; };
+      }
+    }
+  };
+
+  const clicDerechoMat = async () => {
+    const h = await waitAny(XP.matHeader, 8000);
+    if (!h) throw new Error('no encuentro la columna Material');
+    rclick(h);
+    await sleep(400);
+  };
+  const quitarFiltro = async () => {
+    await clicDerechoMat();
+    const b = await waitAny(XP.borrar, 6000);
+    if (!b) throw new Error('no encuentro "Borrar filtro"');
+    clic(b);
+    await sleep(300);
+  };
+  const indiceCol = async () => {
+    const h = await waitAny(XP.gridHdr, 3000);
+    if (!h) return null;
+    let el = h, id = '';
+    for (let i = 0; i < 6 && el; i++) {
+      if (el.id && el.id.indexOf('#') >= 0) { id = el.id; break; }
+      el = el.parentElement;
+    }
+    const m = /,(\d+)#/.exec(id);
+    return m ? m[1] : null;
+  };
+  const escribirPorPreliq = async (m, v) => {
+    const idx = await indiceCol();
+    const xps = [];
+    if (idx) xps.push("//*[contains(@id,',"  + idx + "#if')]");
+    xps.push("//*[contains(@id,',8#if')]");
+    xps.push("//*[normalize-space(text())='" + m + "']/following::*[contains(@class,'lsField_input')][1]");
+    xps.push("(//*[contains(@class,'lsField_input')])[1]");
+    const c = await waitAny(xps, 6000);
+    if (!c) throw new Error('no encuentro la celda Por PreLiquidar');
+    clic(c);
+    await sleep(250);
+    const act = (c.tagName === 'INPUT' || c.tagName === 'TEXTAREA') ? c : actDoc();
+    if (!act) throw new Error('sin campo activo en la celda');
+    setVal(act, v);
+    key(act, 'Enter', 'Enter', 13);
+    await sleep(200);
+  };
+  const agregarNuevo = async (m, v) => {
+    const cb = await waitAny(XP.checkbox, 6000);
+    if (!cb) throw new Error('no encuentro el checkbox de la primera fila');
+    clic(cb);
+    await sleep(200);
+    const prev = NUEVAS.length;
+    const b = await waitAny(XP.agregar, 6000);
+    if (!b) throw new Error('no encuentro "Agregar material / servicio"');
+    clic(b);
+    let root = document;
+    const t0 = Date.now();
+    while (Date.now() - t0 < 1500 && NUEVAS.length === prev) await sleep(100);
+    if (NUEVAS.length > prev) {
+      const w = NUEVAS[NUEVAS.length - 1];
+      const t1 = Date.now();
+      while (Date.now() - t1 < 8000 && (!w.document || w.document.readyState !== 'complete')) await sleep(150);
+      root = w.document;
+    }
+    await sleep(300);
+    const matIn = actDoc(root) || (root.activeElement && root.activeElement !== root.body ? root.activeElement : null);
+    if (!matIn) throw new Error('sin campo Material activo');
+    setVal(matIn, m);
+    key(matIn, 'Enter', 'Enter', 13);
+    await sleep(400);
+    const c = await waitAny(XP.cant, 8000, root);
+    if (!c) throw new Error('no encuentro "Cant. por preliquidar"');
+    let tgt = c;
+    if (!(c.tagName === 'INPUT' || c.tagName === 'TEXTAREA')) { clic(c); await sleep(150); tgt = actDoc(root) || c; }
+    setVal(tgt, v);
+    await sleep(200);
+    key(tgt, 'F1', 'F1', 112, true);
+    await sleep(600);
+  };
+  const procesarMaterial = async (m, v) => {
+    await clicDerechoMat();
+    const f = await waitAny(XP.fijar, 6000);
+    if (!f) throw new Error('no encuentro "Fijar filtro"');
+    clic(f);
+    await sleep(300);
+    const inp = await waitAny(XP.inputFiltro, 6000);
+    if (!inp) throw new Error('no encuentro el campo de filtro');
+    setVal(inp, m);
+    key(inp, 'Enter', 'Enter', 13);
+    await sleep(400);
+    const existe = await waitAny(["//*[normalize-space(text())='" + m + "']", "//*[contains(text(),'" + m + "')]"], 500);
+    let escrito = false;
+    if (existe) {
+      try { await escribirPorPreliq(m, v); escrito = true; }
+      catch (e) { log('   aviso: ' + e.message); }
+    }
+    await quitarFiltro();
+    if (escrito) return 'actualizado';
+    await agregarNuevo(m, v);
+    return 'agregado';
+  };
+
+  const main = async () => {
+    hookOpen();
+    let raw = null;
+    try { raw = await navigator.clipboard.readText(); } catch (e) {}
+    if (!raw || raw.indexOf('"items"') < 0) {
+      raw = prompt('Pega aquí el texto copiado desde la página de preparación (botón "Copiar datos para SAP"):');
+    }
+    if (!raw) { log('Cancelado.'); return; }
+    let P;
+    try { P = JSON.parse(raw); } catch (e) { log('El texto no es JSON válido.'); return; }
+    log('Tipo: ' + P.tipo + ' | ID: ' + P.id + ' | Registros: ' + P.items.length);
+
+    let hdr = await waitAny(XP.gridHdr, 2000);
+    if (!hdr) {
+      const idIn = await waitAny(XP.idInput, 5000);
+      if (!idIn) { log('No encuentro el grid ni el campo de ID. Abre ZPM018 primero.'); return; }
+      log('Ingresando ID ' + P.id + ' en ZPM018...');
+      setVal(idIn, P.id);
+      key(idIn, 'Enter', 'Enter', 13);
+      hdr = await waitAny(XP.gridHdr, 25000);
+      if (!hdr) { log('No cargó el grid de preliquidación tras ingresar el ID.'); return; }
+    }
+
+    const ok = [], add = [], err = [];
+    for (let i = 0; i < P.items.length; i++) {
+      const m = P.items[i][0], v = P.items[i][1];
+      log((i + 1) + '/' + P.items.length + '  ' + m + ' -> ' + v);
+      try {
+        const st = await procesarMaterial(m, v);
+        if (st === 'actualizado') { ok.push(m); log('   ACTUALIZADO'); }
+        else { add.push(m); log('   AGREGADO'); }
+      } catch (e) {
+        err.push(m);
+        log('   ERROR: ' + e.message);
+      }
+      await sleep(150);
+    }
+    log('--- Resumen: actualizados ' + ok.length + ' | agregados ' + add.length + ' | errores ' + err.length);
+    if (err.length) log('Errores: ' + err.join(', '));
+  };
+  main();
+}
+
+/* Favorito: se genera con el código de botPreliq, codificado para la URL */
+$('bm').href = 'javascript:' + encodeURIComponent('(' + botPreliq.toString() + ')();');
+$('bm').onclick = e => { e.preventDefault(); msg('Arrastra este enlace a la barra de favoritos y ejecútalo dentro de SAP.'); };
+
+buildGrid();
+</script>
+</body>
+</html>
